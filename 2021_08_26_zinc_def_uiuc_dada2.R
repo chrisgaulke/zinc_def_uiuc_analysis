@@ -154,6 +154,11 @@ head(track)
 
 # ANALYSIS: ADD TAX -------------------------------------------------------
 
+#***Here is where you will need to go and download the silva databases.
+#***Be sure to get the right ones (the names are the same as the ones below)
+#***These files can be downloaded here:https://zenodo.org/record/4587955#.YSlzKC1h1hA
+
+
 taxa <- assignTaxonomy(seqtab.nochim,
           "/Users/cgaulke/unsynced_projects/db/silva_dada2/silva_nr99_v138.1_train_set.fa",
           multithread=TRUE)
