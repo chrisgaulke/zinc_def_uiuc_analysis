@@ -139,6 +139,11 @@ dim(seqtab.nochim)
 #how much data was wrapped up in chimeras
 sum(seqtab.nochim)/sum(seqtab)
 
+write.table(seqtab.nochim,
+            file = "data/dada2/seqtab_nochim.txt",
+            quote = FALSE,
+            sep = "\t",
+            )
 
 # ANALYSIS: TRACK READS ---------------------------------------------------
 
