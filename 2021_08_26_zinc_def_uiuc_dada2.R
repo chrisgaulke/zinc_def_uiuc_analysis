@@ -41,6 +41,8 @@
 #BiocManager::install("dada2")
 library(dada2)
 library(ggplot2)
+options(stringsAsFactors = F)
+
 #clever girl
 
 #decompress the and untar the archive
@@ -173,3 +175,69 @@ taxa <- addSpecies(taxa, "/Users/cgaulke/unsynced_projects/db/silva_dada2/silva_
 taxa.print <- taxa
 rownames(taxa.print) <- NULL
 head(taxa.print)
+
+
+# IMPORT: METADATA --------------------------------------------------------
+
+mouse_metadata.df <- read.table("/Users/cgaulke/Documents/research/zinc_def_uiuc/data/combined_mouse_metadata.txt",
+                                sep="\t",
+                                header = T)
+
+rownames(mouse_metadata.df) <- mouse_metadata.df$id
+
+
+mouse_ids.names <- sapply(rownames(seqtab.nochim),FUN = function(x){strsplit(x,"_")[[1]][1]} )
+names(mouse_ids.names) <- NULL
+
+master_metadata.df <- data.frame(matrix(nrow = 155,ncol = 8, "NA"))
+colnames(master_metadata.df) <- c("id", "weight", "sex", "age", "group", "gf", "day", "tissue")
+
+rownames(master_metadata.df) <- rownames(seqtab.nochim)
+master_metadata.df$id <- mouse_ids.names
+
+#must use the <<- instead of the <- operator
+#note this code is not very readable
+
+lapply(rownames(master_metadata.df),
+       FUN= function(x){
+         master_metadata.df[x,c("weight", "sex", "age", "group")] <<-
+           mouse_metadata.df[master_metadata.df[x,"id"],
+                             c("weight", "sex", "age", "group")] })
+
+# now one by one we can add additional data with grep
+
+master_metadata.df$gf <-
+  as.numeric(grepl(pattern = "gZ",x = master_metadata.df$id))
+
+
+master_metadata.df$tissue[grep(pattern = "cecum",
+                               x = rownames(master_metadata.df),
+                               ignore.case = T)] <- "cecum"
+
+master_metadata.df$tissue[grep(pattern = "Duodenum",
+                               x = rownames(master_metadata.df),
+                               ignore.case = T)] <- "Duodenum"
+
+master_metadata.df$tissue[grep(pattern = "Jejunum",
+                               x = rownames(master_metadata.df),
+                               ignore.case = T)] <- "Jejunum"
+
+master_metadata.df$tissue[grep(pattern = "feces",
+                               x = rownames(master_metadata.df),
+                               ignore.case = T)] <- "feces"
+
+master_metadata.df$day[grep(pattern = "Day_0_",
+                               x = rownames(master_metadata.df),
+                               ignore.case = T)] <- "0"
+
+master_metadata.df$day[grep(pattern = "Day_21_",
+                            x = rownames(master_metadata.df),
+                            ignore.case = T)] <- "21"
+
+master_metadata.df$day[grep(pattern = "Day_42_",
+                            x = rownames(master_metadata.df),
+                            ignore.case = T)] <- "42"
+
+master_metadata.df$day[grep(pattern = "Day",
+                            x = rownames(master_metadata.df),
+                            ignore.case = T, invert = T)] <- 43
