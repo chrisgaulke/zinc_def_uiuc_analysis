@@ -240,4 +240,231 @@ master_metadata.df$day[grep(pattern = "Day_42_",
 
 master_metadata.df$day[grep(pattern = "Day",
                             x = rownames(master_metadata.df),
-                            ignore.case = T, invert = T)] <- 43
+                            ignore.case = T, invert = T)] <- "43"
+
+
+
+# ANALYSIS: NORMALIZE  ----------------------------------------------------
+
+all(rownames(seqtab.nochim) == rownames(master_metadata.df))
+
+all(rownames(seqtab.nochim) == rownames(master_metadata.df))
+
+any(c(0,0,0,0,0,0))
+
+#make a lookup so we can change header
+seqtab_nochim.lookup <- data.frame(seqs = colnames(seqtab.nochim),
+                                   asv = paste0("ASV", seq(from = 1, to =ncol(seqtab.nochim)))
+)
+
+colnames(seqtab.nochim) <- paste0("ASV", seq(from = 1, to =ncol(seqtab.nochim)))
+
+
+seqtab_nochim.relabd <- sweep(seqtab.nochim,
+                              MARGIN = 1,
+                              rowSums(seqtab.nochim),
+                              FUN = '/')
+
+
+# ANALYSIS: PCA all -----------------------------------------------------------
+
+#Not run
+seqtab_nochim.pca <- prcomp(seqtab_nochim.relabd,scale. = F, center = F)
+
+all(rownames(seqtab_nochim.pca$x) == rownames(master_metadata.df))
+
+
+seqtab_nochim_pca.df <- as.data.frame(seqtab_nochim.pca$x[,1:5])
+
+seqtab_nochim_pca.df$sex <- master_metadata.df$sex
+seqtab_nochim_pca.df$group <- master_metadata.df$group
+seqtab_nochim_pca.df$gf <- master_metadata.df$gf
+seqtab_nochim_pca.df$day <- master_metadata.df$day
+seqtab_nochim_pca.df$tissue <- master_metadata.df$tissue
+
+seqtab_nochim_pca.plot <- ggplot(data = seqtab_nochim_pca.df,
+                                 aes(x = PC2,
+                                     y = PC3,
+                                     color = tissue,
+                                     shape = group))
+
+seqtab_nochim_pca.plot +
+  geom_point()
+
+
+# ANALYSIS: Adonis all --------------------------------------------------------
+
+library(vegan)
+set.seed(731)
+seqtab_nochim.adonis <- adonis(seqtab_nochim.relabd~tissue*group+gf,
+                               data = master_metadata.df, permutations = 5000)
+
+seqtab_nochim.adonis
+
+# ANALYSIS: PCA Feces -----------------------------------------------------------
+
+seqtab_nochim_feces.pca <- prcomp(subset(seqtab_nochim.relabd,
+                             subset = rownames(seqtab_nochim.relabd) %in%
+                               rownames(master_metadata.df[which(master_metadata.df$tissue == "feces"),]
+                                        )
+                             ),
+                             scale. = F,
+                             center = F)
+
+all(rownames(seqtab_nochim_feces.pca$x) == rownames(master_metadata.df[which(master_metadata.df$tissue == "feces"),]))
+
+
+seqtab_nochim_feces_pca.df <- as.data.frame(seqtab_nochim_feces.pca$x[,1:5])
+
+seqtab_nochim_feces_pca.df$sex    <- master_metadata.df[which(master_metadata.df$tissue == "feces"),"sex"]
+seqtab_nochim_feces_pca.df$group  <- master_metadata.df[which(master_metadata.df$tissue == "feces"),"group"]
+seqtab_nochim_feces_pca.df$gf     <- master_metadata.df[which(master_metadata.df$tissue == "feces"),"gf"]
+seqtab_nochim_feces_pca.df$day    <- master_metadata.df[which(master_metadata.df$tissue == "feces"),"day"]
+seqtab_nochim_feces_pca.df$tissue <- master_metadata.df[which(master_metadata.df$tissue == "feces"),"tissue"]
+
+seqtab_nochim_feces_pca.plot <- ggplot(data = seqtab_nochim_feces_pca.df,
+                                 aes(x = PC1,
+                                     y = PC2,
+                                     color = group,
+                                     shape = day))
+
+seqtab_nochim_feces_pca.plot +
+  geom_point()
+
+# ANALYSIS: adonis Feces -----------------------------------------------------------
+
+set.seed(731)
+seqtab_nochim_feces.adonis <- adonis(subset(seqtab_nochim.relabd,
+                                            subset = rownames(seqtab_nochim.relabd) %in%
+                                              rownames(master_metadata.df[which(master_metadata.df$tissue == "feces"),]
+                                              ))~group*day * sex,
+                               data = master_metadata.df[which(master_metadata.df$tissue == "feces"),], permutations = 5000)
+
+seqtab_nochim_feces.adonis
+
+
+# ANALYSIS: PCA Jejunum -----------------------------------------------------------
+
+seqtab_nochim_Jejunum.pca <- prcomp(subset(seqtab_nochim.relabd,
+                                           subset = rownames(seqtab_nochim.relabd) %in%
+                                             rownames(master_metadata.df[which(master_metadata.df$tissue == "Jejunum"),]
+                                             )
+),
+scale. = F,
+center = F)
+
+all(rownames(seqtab_nochim_Jejunum.pca$x) == rownames(master_metadata.df[which(master_metadata.df$tissue == "Jejunum"),]))
+
+
+seqtab_nochim_Jejunum_pca.df <- as.data.frame(seqtab_nochim_Jejunum.pca$x[,1:5])
+
+seqtab_nochim_Jejunum_pca.df$sex    <- master_metadata.df[which(master_metadata.df$tissue == "Jejunum"),"sex"]
+seqtab_nochim_Jejunum_pca.df$group  <- master_metadata.df[which(master_metadata.df$tissue == "Jejunum"),"group"]
+seqtab_nochim_Jejunum_pca.df$gf     <- master_metadata.df[which(master_metadata.df$tissue == "Jejunum"),"gf"]
+seqtab_nochim_Jejunum_pca.df$day    <- master_metadata.df[which(master_metadata.df$tissue == "Jejunum"),"day"]
+seqtab_nochim_Jejunum_pca.df$tissue <- master_metadata.df[which(master_metadata.df$tissue == "Jejunum"),"tissue"]
+
+seqtab_nochim_Jejunum_pca.plot <- ggplot(data = seqtab_nochim_Jejunum_pca.df,
+                                         aes(x = PC1,
+                                             y = PC2,
+                                             color = group,
+                                             shape = day))
+
+seqtab_nochim_Jejunum_pca.plot +
+  geom_point()
+
+# ANALYSIS: adonis Jejunum -----------------------------------------------------------
+
+set.seed(731)
+seqtab_nochim_Jejunum.adonis <- adonis(subset(seqtab_nochim.relabd,
+                                              subset = rownames(seqtab_nochim.relabd) %in%
+                                                rownames(master_metadata.df[which(master_metadata.df$tissue == "Jejunum"),]
+                                                ))~group* sex,
+                                       data = master_metadata.df[which(master_metadata.df$tissue == "Jejunum"),], permutations = 5000)
+
+seqtab_nochim_Jejunum.adonis
+
+# ANALYSIS: PCA Duodenum -----------------------------------------------------------
+
+seqtab_nochim_Duodenum.pca <- prcomp(subset(seqtab_nochim.relabd,
+                                            subset = rownames(seqtab_nochim.relabd) %in%
+                                              rownames(master_metadata.df[which(master_metadata.df$tissue == "Duodenum"),]
+                                              )
+),
+scale. = F,
+center = F)
+
+all(rownames(seqtab_nochim_Duodenum.pca$x) == rownames(master_metadata.df[which(master_metadata.df$tissue == "Duodenum"),]))
+
+
+seqtab_nochim_Duodenum_pca.df <- as.data.frame(seqtab_nochim_Duodenum.pca$x[,1:5])
+
+seqtab_nochim_Duodenum_pca.df$sex    <- master_metadata.df[which(master_metadata.df$tissue == "Duodenum"),"sex"]
+seqtab_nochim_Duodenum_pca.df$group  <- master_metadata.df[which(master_metadata.df$tissue == "Duodenum"),"group"]
+seqtab_nochim_Duodenum_pca.df$gf     <- master_metadata.df[which(master_metadata.df$tissue == "Duodenum"),"gf"]
+seqtab_nochim_Duodenum_pca.df$day    <- master_metadata.df[which(master_metadata.df$tissue == "Duodenum"),"day"]
+seqtab_nochim_Duodenum_pca.df$tissue <- master_metadata.df[which(master_metadata.df$tissue == "Duodenum"),"tissue"]
+
+seqtab_nochim_Duodenum_pca.plot <- ggplot(data = seqtab_nochim_Duodenum_pca.df,
+                                          aes(x = PC1,
+                                              y = PC2,
+                                              color = group,
+                                              shape = day))
+
+seqtab_nochim_Duodenum_pca.plot +
+  geom_point()
+
+# ANALYSIS: adonis Duodenum -----------------------------------------------------------
+
+set.seed(731)
+seqtab_nochim_Duodenum.adonis <- adonis(subset(seqtab_nochim.relabd,
+                                               subset = rownames(seqtab_nochim.relabd) %in%
+                                                 rownames(master_metadata.df[which(master_metadata.df$tissue == "Duodenum"),]
+                                                 ))~group * sex,
+                                        data = master_metadata.df[which(master_metadata.df$tissue == "Duodenum"),], permutations = 5000)
+
+seqtab_nochim_Duodenum.adonis
+
+
+
+# ANALYSIS: PCA cecum -----------------------------------------------------------
+
+seqtab_nochim_cecum.pca <- prcomp(subset(seqtab_nochim.relabd,
+                                         subset = rownames(seqtab_nochim.relabd) %in%
+                                           rownames(master_metadata.df[which(master_metadata.df$tissue == "cecum"),]
+                                           )
+),
+scale. = F,
+center = F)
+
+all(rownames(seqtab_nochim_cecum.pca$x) == rownames(master_metadata.df[which(master_metadata.df$tissue == "cecum"),]))
+
+
+seqtab_nochim_cecum_pca.df <- as.data.frame(seqtab_nochim_cecum.pca$x[,1:5])
+
+seqtab_nochim_cecum_pca.df$sex    <- master_metadata.df[which(master_metadata.df$tissue == "cecum"),"sex"]
+seqtab_nochim_cecum_pca.df$group  <- master_metadata.df[which(master_metadata.df$tissue == "cecum"),"group"]
+seqtab_nochim_cecum_pca.df$gf     <- master_metadata.df[which(master_metadata.df$tissue == "cecum"),"gf"]
+seqtab_nochim_cecum_pca.df$day    <- master_metadata.df[which(master_metadata.df$tissue == "cecum"),"day"]
+seqtab_nochim_cecum_pca.df$tissue <- master_metadata.df[which(master_metadata.df$tissue == "cecum"),"tissue"]
+
+seqtab_nochim_cecum_pca.plot <- ggplot(data = seqtab_nochim_cecum_pca.df,
+                                       aes(x = PC1,
+                                           y = PC2,
+                                           color = group,
+                                           shape = factor(gf)))
+
+seqtab_nochim_cecum_pca.plot +
+  geom_point()
+
+# ANALYSIS: adonis cecum -----------------------------------------------------------
+
+set.seed(731)
+seqtab_nochim_cecum.adonis <- adonis(subset(seqtab_nochim.relabd,
+                                            subset = rownames(seqtab_nochim.relabd) %in%
+                                              rownames(master_metadata.df[which(master_metadata.df$tissue == "cecum"),]
+                                              ))~group*gf ,
+                                     data = master_metadata.df[which(master_metadata.df$tissue == "cecum"),], permutations = 5000)
+
+seqtab_nochim_cecum.adonis
+
