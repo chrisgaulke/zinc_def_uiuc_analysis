@@ -41,6 +41,8 @@
 #BiocManager::install("dada2")
 library(dada2)
 library(ggplot2)
+library(vegan)
+
 options(stringsAsFactors = F)
 
 #clever girl
@@ -50,6 +52,44 @@ options(stringsAsFactors = F)
 
 #used this to move all empty files to a dump dir
 #find . -maxdepth 1 -type f -size -100 -exec mv {} dumps/ \;
+
+
+# Functions ---------------------------------------------------------------
+
+###
+#              Function filter_df                #
+###
+
+filter <- function(df) {
+  df <- df[which(rowSums(df) > 0), which(colSums(df) > 0)]
+  return(df)
+}
+
+###
+#             Function normalize                 #
+###
+
+#normalize counts either by relative abundance of rarefying
+#depends on vegan
+
+normalize <- function(df, method="rel", depth=depth){
+  #default method = relative abundance
+  if(method == "rare"){
+    if( is.null(depth)){
+      depth <- min(rowSums(df))
+    }
+    ndf <- rrarefy(df, depth)
+    ndf <- ndf[,which(colSums(ndf) > 0), drop =F]
+  }else{
+    ndf <- sweep(df,
+                 1,
+                 rowSums(df),
+                 `/`)
+    #  ndf <- ndf[,which(colSums(ndf) > 0), drop =F]
+  }
+  return(ndf)
+}
+
 
 # IMPORT DATA -------------------------------------------------------------
 
@@ -248,9 +288,26 @@ master_metadata.df$day[grep(pattern = "Day",
 
 all(rownames(seqtab.nochim) == rownames(master_metadata.df))
 
-all(rownames(seqtab.nochim) == rownames(master_metadata.df))
+raresamp <- min(rowSums(seqtab.nochim))
 
-any(c(0,0,0,0,0,0))
+#now we can plot the curves
+rarecurve(seqtab.nochim, step = 1000,
+          sample = 0,
+          label = F,
+          col = "black")
+
+abline(v = 2000, col = "red")
+abline(v = 5000, col = "yellow")
+abline(v = 7500, col = "yellow")
+abline(v = 10000, col = "black")
+
+
+seqtab_nochim.filter <- seqtab.nochim[which(rowSums(seqtab.nochim) > 4999),]
+
+seqtab_nochim.filter <- normalize(seqtab_nochim.filter,method = "rare", depth = 5000)
+seqtab_nochim.filter <- filter(seqtab_nochim.filter)
+
+filter_metadata.df <- master_metadata.df[which(rownames(master_metadata.df) %in% rownames(seqtab_nochim.filter)),]
 
 #make a lookup so we can change header
 seqtab_nochim.lookup <- data.frame(seqs = colnames(seqtab.nochim),
@@ -265,22 +322,21 @@ seqtab_nochim.relabd <- sweep(seqtab.nochim,
                               rowSums(seqtab.nochim),
                               FUN = '/')
 
-
 # ANALYSIS: PCA all -----------------------------------------------------------
 
 #Not run
-seqtab_nochim.pca <- prcomp(seqtab_nochim.relabd,scale. = F, center = F)
+seqtab_nochim.pca <- prcomp(seqtab_nochim.filter,scale. = F, center = F)
 
-all(rownames(seqtab_nochim.pca$x) == rownames(master_metadata.df))
+all(rownames(seqtab_nochim.pca$x) == rownames(filter_metadata.df))
 
 
 seqtab_nochim_pca.df <- as.data.frame(seqtab_nochim.pca$x[,1:5])
 
-seqtab_nochim_pca.df$sex <- master_metadata.df$sex
-seqtab_nochim_pca.df$group <- master_metadata.df$group
-seqtab_nochim_pca.df$gf <- master_metadata.df$gf
-seqtab_nochim_pca.df$day <- master_metadata.df$day
-seqtab_nochim_pca.df$tissue <- master_metadata.df$tissue
+seqtab_nochim_pca.df$sex <- filter_metadata.df$sex
+seqtab_nochim_pca.df$group <- filter_metadata.df$group
+seqtab_nochim_pca.df$gf <- filter_metadata.df$gf
+seqtab_nochim_pca.df$day <- filter_metadata.df$day
+seqtab_nochim_pca.df$tissue <- filter_metadata.df$tissue
 
 seqtab_nochim_pca.plot <- ggplot(data = seqtab_nochim_pca.df,
                                  aes(x = PC2,
@@ -294,33 +350,32 @@ seqtab_nochim_pca.plot +
 
 # ANALYSIS: Adonis all --------------------------------------------------------
 
-library(vegan)
 set.seed(731)
-seqtab_nochim.adonis <- adonis(seqtab_nochim.relabd~tissue*group+gf,
-                               data = master_metadata.df, permutations = 5000)
+seqtab_nochim.adonis <- adonis(seqtab_nochim.filter~tissue+group+gf+id,
+                               data = filter_metadata.df, permutations = 5000)
 
 seqtab_nochim.adonis
 
 # ANALYSIS: PCA Feces -----------------------------------------------------------
 
-seqtab_nochim_feces.pca <- prcomp(subset(seqtab_nochim.relabd,
-                             subset = rownames(seqtab_nochim.relabd) %in%
-                               rownames(master_metadata.df[which(master_metadata.df$tissue == "feces"),]
+seqtab_nochim_feces.pca <- prcomp(subset(seqtab_nochim.filter,
+                             subset = rownames(seqtab_nochim.filter) %in%
+                               rownames(filter_metadata.df[which(filter_metadata.df$tissue == "feces"),]
                                         )
                              ),
                              scale. = F,
                              center = F)
 
-all(rownames(seqtab_nochim_feces.pca$x) == rownames(master_metadata.df[which(master_metadata.df$tissue == "feces"),]))
+all(rownames(seqtab_nochim_feces.pca$x) == rownames(filter_metadata.df[which(filter_metadata.df$tissue == "feces"),]))
 
 
 seqtab_nochim_feces_pca.df <- as.data.frame(seqtab_nochim_feces.pca$x[,1:5])
 
-seqtab_nochim_feces_pca.df$sex    <- master_metadata.df[which(master_metadata.df$tissue == "feces"),"sex"]
-seqtab_nochim_feces_pca.df$group  <- master_metadata.df[which(master_metadata.df$tissue == "feces"),"group"]
-seqtab_nochim_feces_pca.df$gf     <- master_metadata.df[which(master_metadata.df$tissue == "feces"),"gf"]
-seqtab_nochim_feces_pca.df$day    <- master_metadata.df[which(master_metadata.df$tissue == "feces"),"day"]
-seqtab_nochim_feces_pca.df$tissue <- master_metadata.df[which(master_metadata.df$tissue == "feces"),"tissue"]
+seqtab_nochim_feces_pca.df$sex    <- filter_metadata.df[which(filter_metadata.df$tissue == "feces"),"sex"]
+seqtab_nochim_feces_pca.df$group  <- filter_metadata.df[which(filter_metadata.df$tissue == "feces"),"group"]
+seqtab_nochim_feces_pca.df$gf     <- filter_metadata.df[which(filter_metadata.df$tissue == "feces"),"gf"]
+seqtab_nochim_feces_pca.df$day    <- filter_metadata.df[which(filter_metadata.df$tissue == "feces"),"day"]
+seqtab_nochim_feces_pca.df$tissue <- filter_metadata.df[which(filter_metadata.df$tissue == "feces"),"tissue"]
 
 seqtab_nochim_feces_pca.plot <- ggplot(data = seqtab_nochim_feces_pca.df,
                                  aes(x = PC1,
@@ -334,14 +389,54 @@ seqtab_nochim_feces_pca.plot +
 # ANALYSIS: adonis Feces -----------------------------------------------------------
 
 set.seed(731)
-seqtab_nochim_feces.adonis <- adonis(subset(seqtab_nochim.relabd,
-                                            subset = rownames(seqtab_nochim.relabd) %in%
-                                              rownames(master_metadata.df[which(master_metadata.df$tissue == "feces"),]
-                                              ))~group*day * sex,
-                               data = master_metadata.df[which(master_metadata.df$tissue == "feces"),], permutations = 5000)
+seqtab_nochim_feces.adonis <- adonis(subset(seqtab_nochim.filter,
+                                            subset = rownames(seqtab_nochim.filter) %in%
+                                              rownames(filter_metadata.df[which(filter_metadata.df$tissue == "feces"),]
+                                              ))~group+day+sex+id,
+                               data = filter_metadata.df[which(filter_metadata.df$tissue == "feces"),], permutations = 5000)
 
 seqtab_nochim_feces.adonis
 
+# ANALYSIS: BRAY ----------------------------------------------------------
+seqtab_nochim.bray <- vegdist(seqtab_nochim.filter, method = "bray")
+seqtab_nochim.bray <- as.matrix(seqtab_nochim.bray)
+
+fecal.rnames <- rownames(filter_metadata.df[which(filter_metadata.df$tissue == "feces"),])
+fecal.ids <- unique(filter_metadata.df[fecal.rnames, "id"])
+
+seqtab_nochim_bray.feces <- seqtab_nochim.bray[which(rownames(seqtab_nochim.bray) %in% fecal.rnames),which(colnames(seqtab_nochim.bray) %in% fecal.rnames) ]
+
+
+
+#get intra individual diversity across time points
+x<- sapply(fecal.ids,
+       FUN = function(x){
+         y <- rownames(filter_metadata.df[which(filter_metadata.df$tissue == "feces" & filter_metadata.df$id == x ),]);
+         seqtab_nochim_bray.feces[y,y]
+        }
+       )
+
+#get rid of dups
+y <- sapply(x, FUN = function(x){ unique(as.vector(x))})
+
+y <- lapply(y, function(x){x[x>0]})
+
+
+#boxplot
+boxplot(unlist(y[1:8]), unlist(y[9:16]), unlist(y[17:24]),
+        names = c("low", "moderate", "control"))
+
+#is this sig
+kruskal.test(c(unlist(y[1:8]), unlist(y[9:16]), unlist(y[17:24])),
+             g = rep(c("low", "moderate", "high"), times= c(23,22,22)) )
+
+#post hoc
+pairwise.wilcox.test(c(unlist(y[1:8]), unlist(y[9:16]), unlist(y[17:24])),
+                     g = rep(c("low", "moderate", "high"), times= c(23,22,22)) )
+
+#both the kruskal and posthoc is significant. This means that temporal variability
+#differs between groups. Increased temporal variability could indicate increased sensitivity
+#to stimuli?
 
 # ANALYSIS: PCA Jejunum -----------------------------------------------------------
 
