@@ -216,7 +216,6 @@ taxa.print <- taxa
 rownames(taxa.print) <- NULL
 head(taxa.print)
 
-
 # IMPORT: METADATA --------------------------------------------------------
 
 mouse_metadata.df <- read.table("/Users/cgaulke/Documents/research/zinc_def_uiuc/data/combined_mouse_metadata.txt",
@@ -562,4 +561,9 @@ seqtab_nochim_cecum.adonis <- adonis(subset(seqtab_nochim.relabd,
                                      data = master_metadata.df[which(master_metadata.df$tissue == "cecum"),], permutations = 5000)
 
 seqtab_nochim_cecum.adonis
+
+
+
+# ANALYSIS: Taxonomy ------------------------------------------------------
+
 
