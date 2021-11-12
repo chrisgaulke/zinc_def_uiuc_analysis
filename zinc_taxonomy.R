@@ -14,7 +14,7 @@ phylotype_analysis <- function(obj, tax) {
     df <- NULL
     #print(h)#debugging
     for (i in 1:length(tax[[h]])) {
-      print(i)#debugging
+      #print(i)#debugging
       v1       <- obj$data[, unlist(tax[[h]][[i]])]
       v2       <- names(tax[[h]])[i]
       if (is.null(dim(v1))) {
@@ -86,7 +86,7 @@ zinc.tax <- make_taxa_df(tax = tax)
 zinc.obj <- NULL
 zinc.obj$data <- seqtab_nochim.relabd
 
-#classifying taxonomy as also called phyotyping
+#classifying taxonomy as also called phylotyping
 zinc_phylotype <- phylotype_analysis(zinc.obj, tax = zinc.tax)
 
 # This is a little different than we have seen before because this is an list of

@@ -93,128 +93,128 @@ normalize <- function(df, method="rel", depth=depth){
 
 # IMPORT DATA -------------------------------------------------------------
 
-path <- "~/unsynced_projects/raw_data/2021_08_12_gaulke_zinc_mouse_uiuc_16S_raw/"
-filt.path <- "/Users/cgaulke/Documents/research/zinc_def_uiuc/zinc_def_uiuc_analysis/data/filtered_data/" #filtered file directory make sure to update
-#git ignore to ignore this
-list.files(path)
-
-fnFs <- sort(list.files(path, pattern="_R1_001.fastq.gz", full.names = TRUE))
-fnRs <- sort(list.files(path, pattern="_R2_001.fastq.gz", full.names = TRUE))
-
-
-# ANALYSIS: QC ------------------------------------------------------------
-
-#make sure the lengths are the same
-length(fnFs) == length(fnRs)
-
-#get sample names, in our case we have to leave some extra on the end
-sample.names <- sapply(strsplit(basename(fnFs), "_R1"), `[`, 1)
-
-#preview
-plotQualityProfile(fnFs[1])
-plotQualityProfile(fnRs[1])
-
-#aggregate all data together now
-fnFs_qual.plot <- plotQualityProfile(fnFs,aggregate = T)
-fnRs_qual.plot <- plotQualityProfile(fnRs,aggregate = T)
-
-#set up for filtering
-filtFs <- file.path(filt.path, "filtered",
-                    paste0(sample.names, "_F_filt.fastq.gz"))
-
-filtRs <- file.path(filt.path, "filtered",
-                    paste0(sample.names, "_R_filt.fastq.gz"))
-
-#make these named
-names(filtFs) <- sample.names
-names(filtRs) <- sample.names
-
-#filter and trim
-#by looking at the data we see a rapid drop in quality around 200bp. Since the
-#average drops below ~25 around 230 we will truncate at 220 for the reverse. The
-#forward looks better (this is usual) so we will truncate around 260
-
-#note the original tutorial uses generic variable names
-
-#stopped here
-
-filter.out <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen=c(260,220),
-                     maxN=0, maxEE=c(2,2), truncQ=2, rm.phix=TRUE,
-                     compress=TRUE, multithread=TRUE) # On Windows set multithread=FALSE
-#take a look
-View(filter.out)
-
-colMeans(filter.out)
-mean(1-(filter.out[,2]/filter.out[,1]))
-
-#lets look at these numbers in a little more detail
-fivenum(1-(filter.out[,2]/filter.out[,1]))
-hist(1-(filter.out[,2]/filter.out[,1]))
-
-# since some libraries look like there is a higher level of filtration
-# than others lets take a closer look at this
-
-sort(1-(filter.out[,2]/filter.out[,1]))
-
-#let's keep this in mind moving forward
-
-# ANALYSIS: ERROR ---------------------------------------------------------
-
-errF <- learnErrors(filtFs, multithread=TRUE)
-errR <- learnErrors(filtRs, multithread=TRUE)
-plotErrors(errF, nominalQ=TRUE)
-
-dadaFs <- dada(filtFs, err=errF, multithread=TRUE)
-dadaRs <- dada(filtRs, err=errR, multithread=TRUE)
-
-
-# ANALYSIS: MERGE AND FILTER -----------------------------------------------
-mergers <- mergePairs(dadaFs, filtFs, dadaRs, filtRs, verbose=TRUE)
-
-seqtab <- makeSequenceTable(mergers)
-dim(seqtab)
-
-seqtab.nochim <- removeBimeraDenovo(seqtab, method="consensus",
-                                    multithread=TRUE, verbose=TRUE)
-dim(seqtab.nochim)
-
-#how much data was wrapped up in chimeras
-sum(seqtab.nochim)/sum(seqtab)
-
-write.table(seqtab.nochim,
-            file = "data/dada2/seqtab_nochim.txt",
-            quote = FALSE,
-            sep = "\t",
-            )
-
-# ANALYSIS: TRACK READS ---------------------------------------------------
-
-getN <- function(x) sum(getUniques(x))
-track <- cbind(filter.out, sapply(dadaFs, getN),
-               sapply(dadaRs, getN),
-               sapply(mergers, getN),
-               rowSums(seqtab.nochim))
-colnames(track) <- c("input", "filtered", "denoisedF", "denoisedR", "merged", "nonchim")
-rownames(track) <- sample.names
-head(track)
-
-
-# ANALYSIS: ADD TAX -------------------------------------------------------
-
-#***Here is where you will need to go and download the silva databases.
-#***Be sure to get the right ones (the names are the same as the ones below)
-#***These files can be downloaded here:https://zenodo.org/record/4587955#.YSlzKC1h1hA
-
-
-taxa <- assignTaxonomy(seqtab.nochim,
-          "/Users/cgaulke/unsynced_projects/db/silva_dada2/silva_nr99_v138.1_train_set.fa",
-          multithread=TRUE)
-
-taxa <- addSpecies(taxa, "/Users/cgaulke/unsynced_projects/db/silva_dada2/silva_species_assignment_v138.1.fa")
-
-taxa.print <- taxa
-rownames(taxa.print) <- NULL
-head(taxa.print)
+# path <- "~/unsynced_projects/raw_data/2021_08_12_gaulke_zinc_mouse_uiuc_16S_raw/"
+# filt.path <- "/Users/cgaulke/Documents/research/zinc_def_uiuc/zinc_def_uiuc_analysis/data/filtered_data/" #filtered file directory make sure to update
+# #git ignore to ignore this
+# list.files(path)
+#
+# fnFs <- sort(list.files(path, pattern="_R1_001.fastq.gz", full.names = TRUE))
+# fnRs <- sort(list.files(path, pattern="_R2_001.fastq.gz", full.names = TRUE))
+#
+#
+# # ANALYSIS: QC ------------------------------------------------------------
+#
+# #make sure the lengths are the same
+# length(fnFs) == length(fnRs)
+#
+# #get sample names, in our case we have to leave some extra on the end
+# sample.names <- sapply(strsplit(basename(fnFs), "_R1"), `[`, 1)
+#
+# #preview
+# plotQualityProfile(fnFs[1])
+# plotQualityProfile(fnRs[1])
+#
+# #aggregate all data together now
+# fnFs_qual.plot <- plotQualityProfile(fnFs,aggregate = T)
+# fnRs_qual.plot <- plotQualityProfile(fnRs,aggregate = T)
+#
+# #set up for filtering
+# filtFs <- file.path(filt.path, "filtered",
+#                     paste0(sample.names, "_F_filt.fastq.gz"))
+#
+# filtRs <- file.path(filt.path, "filtered",
+#                     paste0(sample.names, "_R_filt.fastq.gz"))
+#
+# #make these named
+# names(filtFs) <- sample.names
+# names(filtRs) <- sample.names
+#
+# #filter and trim
+# #by looking at the data we see a rapid drop in quality around 200bp. Since the
+# #average drops below ~25 around 230 we will truncate at 220 for the reverse. The
+# #forward looks better (this is usual) so we will truncate around 260
+#
+# #note the original tutorial uses generic variable names
+#
+# #stopped here
+#
+# filter.out <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen=c(260,220),
+#                      maxN=0, maxEE=c(2,2), truncQ=2, rm.phix=TRUE,
+#                      compress=TRUE, multithread=TRUE) # On Windows set multithread=FALSE
+# #take a look
+# View(filter.out)
+#
+# colMeans(filter.out)
+# mean(1-(filter.out[,2]/filter.out[,1]))
+#
+# #lets look at these numbers in a little more detail
+# fivenum(1-(filter.out[,2]/filter.out[,1]))
+# hist(1-(filter.out[,2]/filter.out[,1]))
+#
+# # since some libraries look like there is a higher level of filtration
+# # than others lets take a closer look at this
+#
+# sort(1-(filter.out[,2]/filter.out[,1]))
+#
+# #let's keep this in mind moving forward
+#
+# # ANALYSIS: ERROR ---------------------------------------------------------
+#
+# errF <- learnErrors(filtFs, multithread=TRUE)
+# errR <- learnErrors(filtRs, multithread=TRUE)
+# plotErrors(errF, nominalQ=TRUE)
+#
+# dadaFs <- dada(filtFs, err=errF, multithread=TRUE)
+# dadaRs <- dada(filtRs, err=errR, multithread=TRUE)
+#
+#
+# # ANALYSIS: MERGE AND FILTER -----------------------------------------------
+# mergers <- mergePairs(dadaFs, filtFs, dadaRs, filtRs, verbose=TRUE)
+#
+# seqtab <- makeSequenceTable(mergers)
+# dim(seqtab)
+#
+# seqtab.nochim <- removeBimeraDenovo(seqtab, method="consensus",
+#                                     multithread=TRUE, verbose=TRUE)
+# dim(seqtab.nochim)
+#
+# #how much data was wrapped up in chimeras
+# sum(seqtab.nochim)/sum(seqtab)
+#
+# write.table(seqtab.nochim,
+#             file = "data/dada2/seqtab_nochim.txt",
+#             quote = FALSE,
+#             sep = "\t",
+#             )
+#
+# # ANALYSIS: TRACK READS ---------------------------------------------------
+#
+# getN <- function(x) sum(getUniques(x))
+# track <- cbind(filter.out, sapply(dadaFs, getN),
+#                sapply(dadaRs, getN),
+#                sapply(mergers, getN),
+#                rowSums(seqtab.nochim))
+# colnames(track) <- c("input", "filtered", "denoisedF", "denoisedR", "merged", "nonchim")
+# rownames(track) <- sample.names
+# head(track)
+#
+#
+# # ANALYSIS: ADD TAX -------------------------------------------------------
+#
+# #***Here is where you will need to go and download the silva databases.
+# #***Be sure to get the right ones (the names are the same as the ones below)
+# #***These files can be downloaded here:https://zenodo.org/record/4587955#.YSlzKC1h1hA
+#
+#
+# taxa <- assignTaxonomy(seqtab.nochim,
+#           "/Users/cgaulke/unsynced_projects/db/silva_dada2/silva_nr99_v138.1_train_set.fa",
+#           multithread=TRUE)
+#
+# taxa <- addSpecies(taxa, "/Users/cgaulke/unsynced_projects/db/silva_dada2/silva_species_assignment_v138.1.fa")
+#
+# taxa.print <- taxa
+# rownames(taxa.print) <- NULL
+# head(taxa.print)
 
 # IMPORT: METADATA --------------------------------------------------------
 
@@ -343,8 +343,23 @@ seqtab_nochim_pca.plot <- ggplot(data = seqtab_nochim_pca.df,
                                      color = tissue,
                                      shape = group))
 
+
+seqtab_nochim_pca.plot<-
 seqtab_nochim_pca.plot +
-  geom_point()
+  geom_point(size = 3, alpha = 0.7)+
+  theme(
+    text = element_text(size = 20, colour = "black"),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_blank(),
+    axis.line = element_line(colour = "black"),
+    axis.text = element_text(colour = "black"),
+    aspect.ratio = 1
+    ) +
+  scale_color_brewer("Tissue", palette = "Dark2")+
+  scale_shape_discrete("Zinc")
+
+
 
 
 # ANALYSIS: Adonis all --------------------------------------------------------
@@ -355,6 +370,80 @@ seqtab_nochim.adonis <- adonis(seqtab_nochim.filter~tissue+group+gf+id,
 
 seqtab_nochim.adonis
 
+
+# ANALYSIS: ALL THE OTHER THINGS...WELL SOME OF THEM ----------------------
+
+# Adonis is limited in that it will tell us things about the whole data set, but
+# that doesn't really apply to the individual components of variation. So you
+# have to use another test to determine if you the factors/vectors of interest
+# are actually associated with the specific axes of variation you are interested in.
+
+#look at the plot!
+seqtab_nochim_pca.plot
+
+
+#Environmental fit tells you if a factor/vector associates with variation in and ordination
+set.seed(731)
+envfit(seqtab_nochim.pca ~tissue+group+gf+id,data = filter_metadata.df, choices = c(1,2))
+envfit(seqtab_nochim.pca ~tissue+group+gf+id,data = filter_metadata.df, choices = c(1,3))
+envfit(seqtab_nochim.pca ~tissue+group+gf+id,data = filter_metadata.df, choices = c(1,4))
+envfit(seqtab_nochim.pca ~tissue+group+gf+id,data = filter_metadata.df, choices = c(2,3))
+envfit(seqtab_nochim.pca ~tissue+group+gf+id,data = filter_metadata.df, choices = c(2,4))
+#and so on
+
+seqtab.envfit <- envfit(seqtab_nochim.pca ~tissue+group+gf+id,data = filter_metadata.df, choices = c(2,3))
+
+# We can map vectors
+seqtab.envfit.df<-as.data.frame(seqtab.envfit$vectors$arrows*sqrt(seqtab.envfit$vectors$r))
+seqtab.envfit.df$species <-rownames(seqtab.envfit.df)
+
+# We can also place the centroids for factored data
+
+seqtab.envfit.centroid <- as.data.frame(seqtab.envfit$factors$centroids )
+seqtab.envfit.centroid <- seqtab.envfit.centroid[1:7,]
+seqtab.envfit.centroid$name <- rownames(seqtab.envfit.centroid)
+seqtab.envfit.centroid$name <- gsub(seqtab.envfit.centroid$name,replacement = "",pattern = "tissue")
+seqtab.envfit.centroid$name <- gsub(seqtab.envfit.centroid$name,replacement = "",pattern = "group")
+
+seqtab_nochim_pca.plot+
+  geom_segment(data=seqtab.envfit.df,aes(x=0,xend=PC2,y=0,yend=PC3),
+               arrow = arrow(length = unit(.5, "cm")),colour="black",inherit.aes =FALSE)+
+  geom_text(data=seqtab.envfit.df,aes(x=PC2,y=PC3,label=species),size=5, inherit.aes =FALSE)#+
+  # geom_point(size = 4, shape =8, color = "black", data = seqtab.envfit.centroid,
+  #            aes(x = PC2,
+  #                y = PC3),inherit.aes =FALSE
+  #            )+
+  # geom_text(data=seqtab.envfit.centroid,aes(x=PC2,y=PC3,label=name),size=5, inherit.aes =FALSE)
+  #
+
+# Analysis of similarities, is similar to adonis, but works  will only test if
+# there is a significant difference between two or more groups
+seqtab.anosim <- anosim(seqtab_nochim.filter,
+                        filter_metadata.df$tissue,
+                        permutations = 5000)
+
+#Multiple Response Permutation Procedure (mrrp) is similar to anosim
+seqtab.mmrp <- anosim(seqtab_nochim.filter,
+                        filter_metadata.df$tissue,
+                        permutations = 5000)
+# I usually don't use use these two because they may be more sensitive to
+# dispersion effects. What are those you ask. Think of dispersion how variable
+# microbiota are across samples belonging to some group
+
+#lets look at the plot again w
+seqtab_nochim_pca.plot +
+  stat_ellipse(alpha = .1,
+               aes(group = tissue, fill = tissue),
+               geom = "polygon")+
+  scale_fill_brewer("", palette = "Dark2")+
+  guides(fill = "none")
+
+# notice the different size and shapes of the polygons? We can determine if this
+# is signifcant using another test
+seqtab_nochim.filter.dist <- vegdist(seqtab_nochim.filter, method = "bray")
+
+seqtab_nochim.bdisp <- betadisper(seqtab_nochim.filter.dist,
+           filter_metadata.df$tissue)
 # ANALYSIS: PCA Feces -----------------------------------------------------------
 
 seqtab_nochim_feces.pca <- prcomp(subset(seqtab_nochim.filter,
@@ -564,6 +653,32 @@ seqtab_nochim_cecum.adonis
 
 
 
-# ANALYSIS: Taxonomy ------------------------------------------------------
+# ANALYSIS: SANDBOX ------------------------------------------------------
+
+all(rownames(seqtab_nochim.filter) == rownames(filter_metadata.df))
+
+
+boxplot(seqtab_nochim.filter[,"ASV3"] ~ filter_metadata.df$tissue,
+        main = "ASV3",
+        ylab = "Count",
+        xlab = "",
+        col = "steelblue"
+        )
+
+xdf <- data.frame(name = rownames(seqtab_nochim.filter),
+                  count = seqtab_nochim.filter[,"ASV3"],
+                  tissue = filter_metadata.df$tissue)
+
+
+xdf.plot <- ggplot(data = xdf, aes(x = tissue, y = count, fill = tissue))
+
+set.seed(731)
+xdf.plot +
+  geom_boxplot()+
+  geom_point(alpha = .5)
+
+xdf.plot +
+  geom_bar(position = "dodge", stat = "summary", fun.y = "mean")+
+  geom_point()
 
 
